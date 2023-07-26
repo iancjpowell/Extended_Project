@@ -79,7 +79,6 @@ class KernelApprox(object):
         temp = np.arange(alpha+1)
         binoms = scipy.special.binom(alpha,temp[::-1])
         return self.w_const * np.sum([binoms * scipy.special.bernoulli(alpha) * (a[:,None]**(temp[::-1])) for a in x], axis=2)
-        #return self.w_const * sympy.bernoulli(alpha, ((k*z) % n)/n )
 
     def w_old(self, z, k):
         n, alpha = self.n, self.alpha #extracting n and alpha
@@ -112,12 +111,6 @@ class KernelApprox(object):
         z_s = np.arange(1,n)
         k = np.arange(n)
         Omega = self.w(z_s, k)
-        #Psi = np.zeros((n-1, n))
-        #Omega = np.zeros((n-1, n))
-        #for z_s in range(1,n):
-        #    for k in range(n):
-        #        #Psi[z_s-1, k] = self.w_old(z_s, k)**2
-        #        Omega[z_s-1, k] = self.w(z_s, k)
         Psi = Omega**2
 
         #loop over all dimensions (except first)
@@ -125,11 +118,6 @@ class KernelApprox(object):
             #compute vectors W_ds and V_ds
             W_ds = Pd[i-1] * (gamma[i])
             V_ds = Pd[i-1] * (gamma[i]**2)
-            #W_ds = np.zeros(n)
-            #V_ds = np.zeros(n)
-            #for k in range(n):
-            #    W_ds[k] = Pd[i-1,k] * (gamma[i])
-            #    V_ds[k] = Pd[i-1,k] * (gamma[i]**2)
             
             #compute criterion for all possible z_s
             crit = (np.matmul(Psi, V_ds) + 2*np.matmul(Omega, W_ds))/n
@@ -140,8 +128,6 @@ class KernelApprox(object):
             #update Pd (for next dimension)
             k = np.arange(n)
             Pd[i] = ( 1  + gamma[1] * self.w(z[i], k) ) * Pd[i-1]
-            #for k in tqdm(range(n), desc = 'CBC Construction', leave = False):
-            #    Pd[i,k] = ( 1  + gamma[1] * self.w(z[i], k) ) * Pd[i-1,k]
 
         #save the generating vector
         self.gen_vec = z
@@ -160,13 +146,8 @@ class KernelApprox(object):
             z = self.gen_vec
         else:
             z = self.CBC()
-
-        #initialize matrix for storing lattice points
-        #x = np.zeros((n, d))
         
         #compute n lattice points
-        #for k in range(1,n+1):
-        #    x[k-1, :] = (k*z % n)/n
         k = np.arange(0,n)
         x = (np.matmul(k[:,None],z[None,:]) % n)/n
 
@@ -228,11 +209,6 @@ class KernelApprox(object):
             fy = np.prod(fy, axis=1, keepdims=True) #product over all dimensions
             return fy
         
-            #w_const = self.w_const
-            #prod = 1
-            #for i in range(d):
-            #    prod *= (1 + (self.gamma[i]**tau)*w_const*sympy.bernoulli(alpha*tau, ((x[i]-y[i]) % 1) ) )
-            #return prod
         elif tau == 2:
             w_const = self.w_const2
         else:
@@ -275,19 +251,10 @@ class KernelApprox(object):
 
         A = np.array(results).astype(np.float64)
 
-        #lamda, n, alpha = self.lamda, self.n, self.alpha #extracting short forms
-        #A = np.zeros((n,n))
-        #for i in tqdm(range(n), desc="Computing Gram matrix", leave = False, disable= not(self.verbose)):
-        #    for j in range(n):
-        #        A[i,j] = self.kernel(x[i,:], x[j,:], 2) + lamda * self.kernel(x[i,:], x[j,:], 1) 
-
         #save the Gram matrix
         self.A = A
         
         return A
-    ###
-    #update for general dimension ############################################################################################################################################
-    ###
 
     ##############################################################################################################
 
@@ -411,17 +378,14 @@ class KernelApprox(object):
     def kern_est_grid(self, N = 100):
         d, n = self.d, self.n #extracting short forms
 
+        #generate a grid
         XXX = np.meshgrid(*[np.linspace(i,j,N+1) for i,j in zip( np.zeros(d),np.ones(d) )])
-        ys = np.vstack(list(map(np.ravel, XXX))).T    
+        ys = np.vstack(list(map(np.ravel, XXX))).T #format usable by kern_est
 
         #save the points
         self.ys = ys
 
         est = self.kern_est(ys)
-
-        #est = np.zeros(N**d)
-        #for i in tqdm(range(N**d), desc="Computing kernel estimate"):
-        #    est[i] = self.kern_est(ys[i])
 
         #save the kernel estimate
         self.est_grid = est
@@ -490,24 +454,8 @@ class KernelApprox(object):
     ##############################################################################################################
     #function for error analysis
     def calc_error_L2(self, f, N = int(1e4), sob_pts = 7, x = None, num_workers = None):
-        #try:
-        #    est = self.est_grid
-        #except:
-        #    print("kernel estimate not found, computing now...")
-        #    est = self.kern_est_grid(N)
-        #    print("kernel estimate computed")    
-        #try:
-        #    ys = self.ys
-        #except:
-        #    d = self.d
-        #    XXX = np.meshgrid(*[np.linspace(i,j,N+1)[:-1] for i,j in zip( np.zeros(d),np.ones(d) )])
-        #    ys = np.vstack( list( map(np.ravel, XXX) ) ).T
-        #    self.ys = ys   
-
-        #n, d = self.n, self.d #extracting short forms
 
         #get a lattice for computing the error
-
         if x is None:
             save_n = self.n #save the current n
             self.n = N #set n to N for CBC algorithm
@@ -575,9 +523,6 @@ class KernelApprox(object):
     ##############################################################################################################
 
     ##############################################################################################################
-    #function for parallelising computation of searching for the optimal perameters for the g function
-    #def g_task(self, i):
-    #    return abs(np.mean( (self.g(self.Y, self.g_perams[i]) - self.g(self.Y_est, self.g_perams[i])) ) )
 
     #function for calculating the weak error
     def calc_error(self, f, g, K = int(1e8), num_workers = None, const = 1.1):
@@ -623,24 +568,6 @@ class KernelApprox(object):
         self.Y = Y # save the samples
         self.Y_est = Y_est # save the samples
         ############################################################
-        #find perameters of g which maximise the error
-        #n = 12*4
-        #self.g = g
-        #self.g_perams = 10**np.linspace(-3, 1, n)
-
-        #with concurrent.futures.ProcessPoolExecutor(max_workers= 12) as executor:
-        #    items = range(n)
-        #    results = list(tqdm(executor.map(self.g_task, items), total=n, leave=True, position=0, desc="Finding perams of g", disable= not(self.verbose)) )
-        #g_peram = items[np.argmax(results)]
-
-        #errs = np.zeros(len(self.g_perams))
-        #for i in tqdm(range(len(self.g_perams))):
-        #    g_peram = self.g_perams[i]
-        #    errs[i] = np.mean( abs(g(Y, g_peram) - g(Y_est, g_peram)) )
-        #g_peram = self.g_perams[np.argmax(errs)]
-
-        #if self.verbose:
-        #    print("g_peram = ", g_peram)
         g_peram = 1e-3
         ############################################################
 
@@ -655,42 +582,6 @@ class KernelApprox(object):
         self.error_var = err_var
 
         return err
-    #def calc_error(self, int_gf, g, K = int(1e6), num_workers = None):
-    #    
-    #    #extra points to sample to ensure K points are found
-    #    extra = 1.3 + 1/np.sqrt(K*0.1) #tends to 1.3 as K -> inf
-    #
-    #    const = 1.1
-    #    K_adj = int(K*extra)
-    #
-    #    u = scipy.stats.uniform.rvs(size = K_adj)
-    #    y = scipy.stats.uniform.rvs(size = (K_adj, self.d))
-    #
-    #    fy = self.kern_est(y, num_workers = num_workers)
-    #
-    #    Y_est = y[np.where(np.less(u,fy[:,0]/(const**2)))]
-    #    Y_est = Y_est[:K]
-    #
-    #    #delete variables to save memory
-    #    #del u, y, fy
-    #
-    #    #l = [a < (fy[i])/(const**2) for a,i in zip(u,np.arange(int(K_adj)))]
-    #    #flat_list = [item for sublist in l for item in sublist]
-    #    #Y_est = y[np.where(flat_list)[0]]
-    #    #Y_est = Y_est[:K]
-    #
-    #
-    #    err = (np.mean( g(Y_est) ) - int_gf)
-    #    err_var = np.var( g(Y_est) )/K
-    #
-    #    if self.verbose:
-    #        print("Error = ", err, " +/- ", np.sqrt(err_var))
-    #
-    #   #save the error
-    #    self.error = err
-    #    self.error_var = err_var
-    #    self.Y_est = Y_est # save the samples
-    #
-    #    return err
+
     
 ######################################################################################################################################################################################################################################################################################################################################################################################################################################
