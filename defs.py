@@ -525,7 +525,7 @@ class KernelApprox(object):
     ##############################################################################################################
 
     #function for calculating the weak error
-    def calc_error(self, f, g, K = int(1e8), num_workers = None, const = 1.1):
+    def calc_error(self, f, g, K = int(1e8), num_workers = None, const = 1.1, g_peram = 1e-3):
         #set the number of workers if not specified
         if num_workers is None:
             num_workers = self.num_workers
@@ -567,8 +567,6 @@ class KernelApprox(object):
 
         self.Y = Y # save the samples
         self.Y_est = Y_est # save the samples
-        ############################################################
-        g_peram = 1e-3
         ############################################################
 
         err = abs( np.mean( (g(Y_est, g_peram) - g(Y, g_peram)) ) ) #numpy.subtract()
